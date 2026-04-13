@@ -1,23 +1,28 @@
-# ORIGINAL REPO  https://github.com/damanikjosh/virtualgl-turbovnc-docker/blob/main/Dockerfile 
 ARG UBUNTU_VERSION=22.04
 
-FROM nvidia/opengl:1.2-glvnd-runtime-ubuntu${UBUNTU_VERSION}
-LABEL authors="vajonam, Michael Helfrich - helfrichmichael"
+FROM ubuntu:${UBUNTU_VERSION}
+LABEL authors="vajonam, Michael Helfrich - helfrichmichael, Eth4ck1e"
 
 ARG VIRTUALGL_VERSION=3.1.1-20240228
 ARG TURBOVNC_VERSION=3.1.1-20240127
 ENV DEBIAN_FRONTEND noninteractive
 
-# Install some basic dependencies
+# Install base dependencies + Mesa/Intel GPU support (replaces nvidia/opengl base)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget xorg xauth gosu supervisor x11-xserver-utils libegl1-mesa libgl1-mesa-glx \
+    wget xorg xauth gosu supervisor x11-xserver-utils \
     locales-all libpam0g libxt6 libxext6 dbus-x11 xauth x11-xkb-utils xkb-data python3 xterm novnc \
     lxde gtk2-engines-murrine gnome-themes-standard gtk2-engines-pixbuf gtk2-engines-murrine arc-theme \
-    freeglut3 libgtk2.0-dev libwxgtk3.0-gtk3-dev libwx-perl libxmu-dev libgl1-mesa-glx libgl1-mesa-dri  \
+    freeglut3 libgtk2.0-dev libwxgtk3.0-gtk3-dev libwx-perl libxmu-dev \
     xdg-utils locales locales-all pcmanfm jq curl git bzip2 gpg-agent software-properties-common \
-    # Packages needed to support the AppImage changes. The libnvidia-egl-gbm1 package resolves an issue 
-    # where GPU acceleration resulted in blank windows being generated.
-    libwebkit2gtk-4.0-dev libnvidia-egl-gbm1 \
+    openssl \
+    # Mesa OpenGL / Intel GPU support
+    libgl1-mesa-glx libgl1-mesa-dri libegl1-mesa libegl-mesa0 \
+    mesa-vulkan-drivers libvulkan1 \
+    libva2 libva-drm2 libva-x11-2 vainfo \
+    intel-media-va-driver \
+    libdrm2 libdrm-intel1 \
+    # Packages needed to support the AppImage
+    libwebkit2gtk-4.0-dev \
     && mkdir -p /usr/share/desktop-directories \
     # Install Firefox without Snap.
     && add-apt-repository ppa:mozillateam/ppa \
@@ -63,7 +68,7 @@ RUN chmod +x /slic3r/get_latest_prusaslicer_release.sh \
   && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks
 
 # Generate key for noVNC and cleanup errors.
-RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/novnc.pem -out /etc/novnc.pem -days 365 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
+RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/novnc.pem -out /etc/novnc.pem -days 3650 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
     && rm /etc/xdg/autostart/lxpolkit.desktop \
     && mv /usr/bin/lxpolkit /usr/bin/lxpolkit.ORIG
 

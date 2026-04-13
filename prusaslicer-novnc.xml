@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>PrusaSlicer-noVNC</Name>
+  <Repository>ghcr.io/Eth4ck1e/prusaslicer-novnc:latest</Repository>
+  <Registry>https://github.com/Eth4ck1e/prusaslicer-novnc/pkgs/container/prusaslicer-novnc</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Eth4ck1e/prusaslicer-novnc</Support>
+  <Project>https://github.com/Eth4ck1e/prusaslicer-novnc</Project>
+  <Overview>PrusaSlicer running in your browser via noVNC. Fork of helfrichmichael/prusaslicer-novnc with Intel Arc GPU support.</Overview>
+  <Category>Tools: MediaApp:Other</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/Eth4ck1e/prusaslicer-novnc/main/icons/prusaslicer-96x96.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+
+  <!-- noVNC web port -->
+  <Config Name="noVNC Web Port" Target="8080" Default="8080" Mode="tcp"
+    Description="Port to access PrusaSlicer in the browser via noVNC."
+    Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+
+  <!-- Volumes -->
+  <Config Name="Configs" Target="/configs/" Default="/mnt/user/appdata/prusaslicer/configs"
+    Description="Persistent storage for PrusaSlicer configuration and profiles."
+    Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/prusaslicer/configs</Config>
+
+  <Config Name="Prints Output" Target="/prints/" Default="/mnt/user/appdata/prusaslicer/prints"
+    Description="Directory where sliced files (G-code) are saved."
+    Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/prusaslicer/prints</Config>
+
+  <!-- GPU device passthrough (Intel Arc via /dev/dri/) -->
+  <Config Name="GPU Device" Target="/dev/dri/" Default="/dev/dri/"
+    Description="Intel GPU device passthrough. Requires the Intel GPU plugin. Leave blank to disable GPU passthrough."
+    Type="Device" Display="always" Required="false" Mask="false">/dev/dri/</Config>
+
+  <!-- Environment variables -->
+  <Config Name="Enable HW GPU Acceleration" Target="ENABLEHWGPU" Default="true"
+    Description="Set to true to enable VirtualGL GPU acceleration via the passed-in GPU device. Requires GPU Device to be set."
+    Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+
+  <Config Name="VNC Resolution" Target="VNC_RESOLUTION" Default="1920x1080"
+    Description="Resolution of the virtual desktop (e.g. 1920x1080, 2560x1440)."
+    Type="Variable" Display="always" Required="false" Mask="false">1920x1080</Config>
+
+  <Config Name="VNC Password" Target="VNC_PASSWORD" Default=""
+    Description="Optional password to protect the VNC session. Leave blank for no password."
+    Type="Variable" Display="always" Required="false" Mask="true"></Config>
+
+  <Config Name="VGL Display" Target="VGL_DISPLAY" Default="egl"
+    Description="VirtualGL display backend. Use 'egl' for Intel/Mesa GPU passthrough."
+    Type="Variable" Display="advanced" Required="false" Mask="false">egl</Config>
+
+  <Config Name="VA-API Driver" Target="LIBVA_DRIVER_NAME" Default="iHD"
+    Description="Intel VA-API driver name. Use 'iHD' for Intel Arc/Gen9+ (recommended). Use 'i965' for older Intel GPUs."
+    Type="Variable" Display="advanced" Required="false" Mask="false">iHD</Config>
+
+  <Config Name="Display" Target="DISPLAY" Default=":0"
+    Description="X display number. Do not change unless you know what you are doing."
+    Type="Variable" Display="advanced" Required="false" Mask="false">:0</Config>
+
+  <Config Name="Supervisor Log Level" Target="SUPD_LOGLEVEL" Default="INFO"
+    Description="Log verbosity for supervisord. Options: TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL."
+    Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
+</Container>

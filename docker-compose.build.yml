@@ -2,12 +2,17 @@
 version: "2.1"
 services:
   prusaslicer-novnc:
-    image: mikeah/prusaslicer-novnc
+    image: ghcr.io/eth4ck1e/prusaslicer-novnc:latest
     build: .
     environment:
-      - SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
-      #- NVIDIA_DRIVER_CAPABILITIES="all"
-      #- NVIDIA_VISIBLE_DEVICES="all"
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+      - DISPLAY=:0
+      - VGL_DISPLAY=egl
+      - LIBVA_DRIVER_NAME=iHD
+      - ENABLEHWGPU=true
+      - VNC_RESOLUTION=1920x1080
+    devices:
+      - /dev/dri/:/dev/dri/
     volumes:
       - ./prints:/prints/
       - ./data:/configs/
