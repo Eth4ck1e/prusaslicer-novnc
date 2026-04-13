@@ -1,8 +1,15 @@
 #!/bin/bash
 
 TMPDIR="$(mktemp -d)"
+GITHUB_TOKEN="${2:-}"
 
-curl -SsL https://api.github.com/repos/prusa3d/PrusaSlicer/releases/latest > $TMPDIR/latest.json
+if [ -n "$GITHUB_TOKEN" ]; then
+  AUTH_HEADER="-H \"Authorization: Bearer ${GITHUB_TOKEN}\""
+else
+  AUTH_HEADER=""
+fi
+
+curl -SsL ${AUTH_HEADER:+$AUTH_HEADER} https://api.github.com/repos/prusa3d/PrusaSlicer/releases/latest > $TMPDIR/latest.json
 
 # Try the older-distros GTK3 AppImage first (broader compatibility), fall back to standard GTK3 AppImage
 url=$(jq -r '.assets[] | select(.browser_download_url|test("linux-x64-older-distros-GTK3.*\\.AppImage$"))|.browser_download_url' $TMPDIR/latest.json | head -1)
@@ -15,12 +22,18 @@ fi
 
 version=$(jq -r .tag_name $TMPDIR/latest.json)
 
-if [ $# -ne 1 ]; then
+if [ -z "$url" ] || [ "$url" = "null" ]; then
+  echo "ERROR: Could not find PrusaSlicer AppImage download URL. API response:" >&2
+  cat $TMPDIR/latest.json >&2
+  exit 1
+fi
+
+if [ $# -lt 1 ]; then
   echo "Wrong number of params"
   exit 1
-else
-  request=$1
 fi
+
+request=$1
 
 case $request in
 

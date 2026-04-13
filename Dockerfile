@@ -5,6 +5,7 @@ LABEL authors="vajonam, Michael Helfrich - helfrichmichael, Eth4ck1e"
 
 ARG VIRTUALGL_VERSION=3.1.1-20240228
 ARG TURBOVNC_VERSION=3.1.1-20240127
+ARG GITHUB_TOKEN=""
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install base dependencies + Mesa/Intel GPU support (replaces nvidia/opengl base)
@@ -21,8 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libva2 libva-drm2 libva-x11-2 vainfo \
     intel-media-va-driver \
     libdrm2 libdrm-intel1 \
-    # Packages needed to support the AppImage
-    libwebkit2gtk-4.0-dev \
+    # Packages needed to support the AppImage (libfuse2 required by AppImage runtime even with --appimage-extract)
+    libwebkit2gtk-4.0-dev libfuse2 \
     && mkdir -p /usr/share/desktop-directories \
     # Install Firefox without Snap.
     && add-apt-repository ppa:mozillateam/ppa \
@@ -44,8 +45,8 @@ RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb https://packagecloud.
 WORKDIR /slic3r
 ADD get_latest_prusaslicer_release.sh /slic3r
 RUN chmod +x /slic3r/get_latest_prusaslicer_release.sh \
-  && latestSlic3r=$(/slic3r/get_latest_prusaslicer_release.sh url) \
-  && slic3rReleaseName=$(/slic3r/get_latest_prusaslicer_release.sh name) \
+  && latestSlic3r=$(/slic3r/get_latest_prusaslicer_release.sh url "${GITHUB_TOKEN}") \
+  && slic3rReleaseName=$(/slic3r/get_latest_prusaslicer_release.sh name "${GITHUB_TOKEN}") \
   && curl -sSL ${latestSlic3r} > ${slic3rReleaseName} \
   && rm -f /slic3r/releaseInfo.json \
   && chmod +x /slic3r/${slic3rReleaseName} \
