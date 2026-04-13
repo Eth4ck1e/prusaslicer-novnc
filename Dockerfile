@@ -12,7 +12,7 @@ ARG PRUSA_VERSION=main
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git cmake build-essential pkg-config \
+    git cmake build-essential pkg-config ccache \
     libgtk-3-dev libwxgtk3.0-gtk3-dev \
     libgl1-mesa-dev libglu1-mesa-dev \
     libcurl4-openssl-dev libssl-dev \
@@ -23,18 +23,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 wget curl \
     && rm -rf /var/lib/apt/lists/*
 
+# ccache persists compiled objects across builds via BuildKit cache mount.
+# Even if a layer is invalidated, unchanged files won't be recompiled.
+ENV CCACHE_DIR=/ccache \
+    CMAKE_C_COMPILER_LAUNCHER=ccache \
+    CMAKE_CXX_COMPILER_LAUNCHER=ccache
+
 RUN git clone --depth 1 --branch ${PRUSA_VERSION} \
     https://github.com/prusa3d/PrusaSlicer.git /prusa
 
 WORKDIR /prusa
 
 # Build bundled third-party deps first (slow, but cached as its own layer).
-RUN cmake deps -B build_deps -DDEP_WX_GTK3=ON \
+# The --mount=type=cache keeps the ccache dir alive between builds.
+RUN --mount=type=cache,target=/ccache \
+    cmake deps -B build_deps -DDEP_WX_GTK3=ON \
     && cmake --build build_deps -j$(nproc)
 
 # Build PrusaSlicer itself.
-RUN cmake . -B build \
+RUN --mount=type=cache,target=/ccache \
+    cmake . -B build \
       -DCMAKE_PREFIX_PATH=/prusa/build_deps/destdir/usr/local \
+      -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       -DSLIC3R_STATIC=1 \
       -DSLIC3R_GTK=3 \
       -DCMAKE_BUILD_TYPE=Release \
