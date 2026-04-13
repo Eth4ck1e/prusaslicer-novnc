@@ -12,7 +12,7 @@ ARG PRUSA_VERSION=main
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git cmake build-essential pkg-config ccache ca-certificates \
+    git cmake build-essential pkg-config ccache ca-certificates ninja-build \
     libgtk-3-dev libwxgtk3.0-gtk3-dev \
     libgl1-mesa-dev libglu1-mesa-dev \
     libcurl4-openssl-dev libssl-dev \
@@ -35,14 +35,14 @@ RUN git clone --depth 1 --branch ${PRUSA_VERSION} \
 WORKDIR /prusa
 
 # Build bundled third-party deps first (slow, but cached as its own layer).
-# The --mount=type=cache keeps the ccache dir alive between builds.
+# Use Ninja to avoid make jobserver issues with ExternalProject (e.g. OCCT).
 RUN --mount=type=cache,target=/ccache \
-    cmake deps -B build_deps -DDEP_WX_GTK3=ON \
+    cmake deps -B build_deps -G Ninja -DDEP_WX_GTK3=ON \
     && cmake --build build_deps -j$(nproc)
 
 # Build PrusaSlicer itself.
 RUN --mount=type=cache,target=/ccache \
-    cmake . -B build \
+    cmake . -B build -G Ninja \
       -DCMAKE_PREFIX_PATH=/prusa/build_deps/destdir/usr/local \
       -DCMAKE_C_COMPILER_LAUNCHER=ccache \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
