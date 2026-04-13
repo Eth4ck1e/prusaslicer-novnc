@@ -41,32 +41,36 @@ RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb https://packagecloud.
     && dpkg -i /tmp/turbovnc_${TURBOVNC_VERSION}_amd64.deb \
     && rm -rf /tmp/*.deb
 
-# Install Prusaslicer.
+# Download and extract PrusaSlicer AppImage.
 WORKDIR /slic3r
 ADD get_latest_prusaslicer_release.sh /slic3r
 RUN chmod +x /slic3r/get_latest_prusaslicer_release.sh \
   && latestSlic3r=$(/slic3r/get_latest_prusaslicer_release.sh url "${GITHUB_TOKEN}") \
   && slic3rReleaseName=$(/slic3r/get_latest_prusaslicer_release.sh name "${GITHUB_TOKEN}") \
-  && curl -sSL ${latestSlic3r} > ${slic3rReleaseName} \
-  && rm -f /slic3r/releaseInfo.json \
-  && chmod +x /slic3r/${slic3rReleaseName} \
-  && /slic3r/${slic3rReleaseName} --appimage-extract \
-  && rm -f /slic3r/${slic3rReleaseName} \
+  && echo "Downloading: ${latestSlic3r}" \
+  && curl -sSL "${latestSlic3r}" -o "${slic3rReleaseName}" \
+  && chmod +x "/slic3r/${slic3rReleaseName}" \
+  && "/slic3r/${slic3rReleaseName}" --appimage-extract \
+  && rm -f "/slic3r/${slic3rReleaseName}" \
+  && rm -f /slic3r/releaseInfo.json
+
+# Create slic3r user and set up directories.
+RUN apt-get autoclean \
   && rm -rf /var/lib/apt/lists/* \
-  && apt-get autoclean \
   && groupadd slic3r \
   && useradd -g slic3r --create-home --home-dir /home/slic3r slic3r \
-  && mkdir -p /slic3r \
-  && mkdir -p /configs \
-  && mkdir -p /prints/ \
+  && mkdir -p /configs /prints \
   && chown -R slic3r:slic3r /slic3r/ /home/slic3r/ /prints/ /configs/ \
-  && locale-gen en_US \
-  && mkdir /configs/.local \
-  && mkdir -p /configs/.config/ \
+  && locale-gen en_US
+
+# Set up config symlinks and bookmarks.
+# ln -s creates /home/slic3r/.config -> /configs/.config/ so PrusaSlicer config persists to the volume.
+RUN mkdir -p /configs/.local /configs/.config \
   && ln -s /configs/.config/ /home/slic3r/ \
   && mkdir -p /home/slic3r/.config/ \
   && echo "XDG_DOWNLOAD_DIR=\"/prints/\"" >> /home/slic3r/.config/user-dirs.dirs \
-  && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks
+  && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks \
+  && chown -R slic3r:slic3r /configs/ /home/slic3r/
 
 # Generate key for noVNC and cleanup errors.
 RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/novnc.pem -out /etc/novnc.pem -days 3650 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
