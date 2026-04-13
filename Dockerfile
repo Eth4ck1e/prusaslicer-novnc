@@ -1,14 +1,56 @@
 ARG UBUNTU_VERSION=22.04
 
+# ─────────────────────────────────────────────
+# Stage 1: Build PrusaSlicer from source
+# ─────────────────────────────────────────────
+FROM ubuntu:${UBUNTU_VERSION} AS builder
+
+# Pass a git branch or tag. Defaults to main (always latest).
+# Override at build time: --build-arg PRUSA_VERSION=version_2.8.1
+ARG PRUSA_VERSION=main
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git cmake build-essential pkg-config \
+    libgtk-3-dev libwxgtk3.0-gtk3-dev \
+    libgl1-mesa-dev libglu1-mesa-dev \
+    libcurl4-openssl-dev libssl-dev \
+    libudev-dev libdbus-1-dev \
+    libtbb-dev \
+    zlib1g-dev libjpeg-dev libpng-dev libtiff-dev \
+    libboost-all-dev \
+    python3 wget curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${PRUSA_VERSION} \
+    https://github.com/prusa3d/PrusaSlicer.git /prusa
+
+WORKDIR /prusa
+
+# Build bundled third-party deps first (slow, but cached as its own layer).
+RUN cmake deps -B build_deps -DDEP_WX_GTK3=ON \
+    && cmake --build build_deps -j$(nproc)
+
+# Build PrusaSlicer itself.
+RUN cmake . -B build \
+      -DCMAKE_PREFIX_PATH=/prusa/build_deps/destdir/usr/local \
+      -DSLIC3R_STATIC=1 \
+      -DSLIC3R_GTK=3 \
+      -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build -j$(nproc)
+
+# ─────────────────────────────────────────────
+# Stage 2: Runtime image
+# ─────────────────────────────────────────────
 FROM ubuntu:${UBUNTU_VERSION}
 LABEL authors="vajonam, Michael Helfrich - helfrichmichael, Eth4ck1e"
 
 ARG VIRTUALGL_VERSION=3.1.1-20240228
 ARG TURBOVNC_VERSION=3.1.1-20240127
-ARG GITHUB_TOKEN=""
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base dependencies + Mesa/Intel GPU support (replaces nvidia/opengl base)
+# Install runtime dependencies + Mesa/Intel GPU support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget xorg xauth gosu supervisor x11-xserver-utils \
     locales-all libpam0g libxt6 libxext6 dbus-x11 xauth x11-xkb-utils xkb-data python3 xterm novnc \
@@ -22,67 +64,54 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libva2 libva-drm2 libva-x11-2 vainfo \
     intel-media-va-driver \
     libdrm2 libdrm-intel1 \
-    # Packages needed to support the AppImage (libfuse2 required by AppImage runtime even with --appimage-extract)
-    libwebkit2gtk-4.0-dev libfuse2 \
+    # Runtime libs needed by compiled PrusaSlicer
+    libgtk-3-0 libglu1-mesa libcurl4 libtbb2 libdbus-1-3 \
+    libwebkit2gtk-4.0-dev \
     && mkdir -p /usr/share/desktop-directories \
     # Install Firefox without Snap.
     && add-apt-repository ppa:mozillateam/ppa \
     && apt update \
     && apt install -y firefox-esr --no-install-recommends \
-    # Clean everything up.
     && apt autoclean -y \
     && apt autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install VirtualGL and TurboVNC
-RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb https://packagecloud.io/dcommander/virtualgl/packages/any/any/virtualgl_${VIRTUALGL_VERSION}_amd64.deb/download.deb?distro_version_id=35\
+RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb https://packagecloud.io/dcommander/virtualgl/packages/any/any/virtualgl_${VIRTUALGL_VERSION}_amd64.deb/download.deb?distro_version_id=35 \
     && wget -qO /tmp/turbovnc_${TURBOVNC_VERSION}_amd64.deb https://packagecloud.io/dcommander/turbovnc/packages/any/any/turbovnc_${TURBOVNC_VERSION}_amd64.deb/download.deb?distro_version_id=35 \
     && dpkg -i /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb \
     && dpkg -i /tmp/turbovnc_${TURBOVNC_VERSION}_amd64.deb \
     && rm -rf /tmp/*.deb
 
-# Download and extract PrusaSlicer AppImage.
-WORKDIR /slic3r
-ADD get_latest_prusaslicer_release.sh /slic3r
-RUN chmod +x /slic3r/get_latest_prusaslicer_release.sh \
-  && latestSlic3r=$(/slic3r/get_latest_prusaslicer_release.sh url "${GITHUB_TOKEN}") \
-  && slic3rReleaseName=$(/slic3r/get_latest_prusaslicer_release.sh name "${GITHUB_TOKEN}") \
-  && echo "Downloading: ${latestSlic3r}" \
-  && curl -sSL "${latestSlic3r}" -o "${slic3rReleaseName}" \
-  && chmod +x "/slic3r/${slic3rReleaseName}" \
-  && "/slic3r/${slic3rReleaseName}" --appimage-extract \
-  && rm -f "/slic3r/${slic3rReleaseName}" \
-  && rm -f /slic3r/releaseInfo.json
+# Copy compiled PrusaSlicer binary and resources from builder stage
+COPY --from=builder /prusa/build/src/prusa-slicer /usr/local/bin/prusa-slicer
+COPY --from=builder /prusa/resources /usr/share/prusa-slicer/resources
 
-# Create slic3r user and set up directories.
-RUN apt-get autoclean \
-  && rm -rf /var/lib/apt/lists/* \
-  && groupadd slic3r \
-  && useradd -g slic3r --create-home --home-dir /home/slic3r slic3r \
-  && mkdir -p /configs /prints \
-  && chown -R slic3r:slic3r /slic3r/ /home/slic3r/ /prints/ /configs/ \
-  && locale-gen en_US
+# Create slic3r user and set up directories
+RUN groupadd slic3r \
+    && useradd -g slic3r --create-home --home-dir /home/slic3r slic3r \
+    && mkdir -p /configs /prints \
+    && locale-gen en_US
 
-# Set up config symlinks and bookmarks.
-# ln -s creates /home/slic3r/.config -> /configs/.config/ so PrusaSlicer config persists to the volume.
+# Set up config symlinks and bookmarks
 RUN mkdir -p /configs/.local /configs/.config \
-  && ln -s /configs/.config/ /home/slic3r/ \
-  && mkdir -p /home/slic3r/.config/ \
-  && echo "XDG_DOWNLOAD_DIR=\"/prints/\"" >> /home/slic3r/.config/user-dirs.dirs \
-  && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks \
-  && chown -R slic3r:slic3r /configs/ /home/slic3r/
+    && ln -s /configs/.config/ /home/slic3r/ \
+    && mkdir -p /home/slic3r/.config/ \
+    && echo "XDG_DOWNLOAD_DIR=\"/prints/\"" >> /home/slic3r/.config/user-dirs.dirs \
+    && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks \
+    && chown -R slic3r:slic3r /home/slic3r/ /prints/ /configs/
 
-# Generate key for noVNC and cleanup errors.
+# Generate key for noVNC and cleanup errors
 RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/novnc.pem -out /etc/novnc.pem -days 3650 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
     && rm /etc/xdg/autostart/lxpolkit.desktop \
     && mv /usr/bin/lxpolkit /usr/bin/lxpolkit.ORIG
 
-ENV PATH ${PATH}:/opt/VirtualGL/bin:/opt/TurboVNC/bin
+ENV PATH=${PATH}:/opt/VirtualGL/bin:/opt/TurboVNC/bin
 
 ADD entrypoint.sh /entrypoint.sh
 ADD supervisord.conf /etc/
 
-# Add a default file to resize and redirect, and adjust icons for noVNC.
+# noVNC index page and icons
 ADD vncresize.html /usr/share/novnc/index.html
 ADD icons/prusaslicer-16x16.png /usr/share/novnc/app/images/icons/novnc-16x16.png
 ADD icons/prusaslicer-24x24.png /usr/share/novnc/app/images/icons/novnc-24x24.png
@@ -98,7 +127,7 @@ ADD icons/prusaslicer-144x144.png /usr/share/novnc/app/images/icons/novnc-144x14
 ADD icons/prusaslicer-152x152.png /usr/share/novnc/app/images/icons/novnc-152x152.png
 ADD icons/prusaslicer-192x192.png /usr/share/novnc/app/images/icons/novnc-192x192.png
 
-# Set Firefox to run with hardware acceleration as if enabled.
+# Set Firefox to run with hardware acceleration when enabled
 RUN sed -i 's|exec $MOZ_LIBDIR/$MOZ_APP_NAME "$@"|if [ -n "$ENABLEHWGPU" ] \&\& [ "$ENABLEHWGPU" = "true" ]; then\n  exec /usr/bin/vglrun $MOZ_LIBDIR/$MOZ_APP_NAME "$@"\nelse\n  exec $MOZ_LIBDIR/$MOZ_APP_NAME "$@"\nfi|g' /usr/bin/firefox-esr
 
 VOLUME /configs/
