@@ -119,9 +119,11 @@ RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb https://packagecloud.
     && dpkg -i /tmp/turbovnc_${TURBOVNC_VERSION}_amd64.deb \
     && rm -rf /tmp/*.deb
 
-# Copy installed PrusaSlicer binary and resources from builder stage
+# Copy installed PrusaSlicer binary and resources from builder stage.
+# Resources land in /usr/local/share/PrusaSlicer (build deps prefix), not /prusa-install.
 COPY --from=builder /prusa-install/bin/prusa-slicer /usr/local/bin/prusa-slicer
-COPY --from=builder /prusa-install/share/PrusaSlicer /usr/local/share/PrusaSlicer
+COPY --from=builder /prusa-install/bin/OCCTWrapper.so /usr/local/bin/OCCTWrapper.so
+COPY --from=builder /usr/local/share/PrusaSlicer /usr/local/share/PrusaSlicer
 
 # Create slic3r user and set up directories
 RUN groupadd slic3r \
