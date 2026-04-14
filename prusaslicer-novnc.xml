@@ -21,9 +21,9 @@
   <Requires/>
 
   <!-- noVNC web port -->
-  <Config Name="noVNC Web Port" Target="8080" Default="8080" Mode="tcp"
+  <Config Name="noVNC Web Port" Target="8080" Default="8383" Mode="tcp"
     Description="Port to access PrusaSlicer in the browser via noVNC."
-    Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+    Type="Port" Display="always" Required="true" Mask="false">8383</Config>
 
   <!-- Volumes -->
   <Config Name="Configs" Target="/configs/" Default="/mnt/user/appdata/prusaslicer/configs"
