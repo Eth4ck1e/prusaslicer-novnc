@@ -54,9 +54,10 @@ RUN find deps -name "*.cmake" -exec \
 
 # Build bundled third-party deps first (slow, but cached as its own layer).
 # Use Ninja to avoid make jobserver issues with ExternalProject (e.g. OCCT).
+# Linking is RAM-heavy — cap at 4 parallel jobs to avoid OOM.
 RUN --mount=type=cache,target=/ccache \
     cmake deps -B build_deps -G Ninja -DDEP_WX_GTK3=ON \
-    && cmake --build build_deps -j$(nproc)
+    && cmake --build build_deps -j4
 
 # Build PrusaSlicer itself.
 RUN --mount=type=cache,target=/ccache \
@@ -66,8 +67,11 @@ RUN --mount=type=cache,target=/ccache \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       -DSLIC3R_STATIC=1 \
       -DSLIC3R_GTK=3 \
+      -DSLIC3R_PCH=OFF \
+      -DSLIC3R_FHS=1 \
+      -DSLIC3R_DESKTOP_INTEGRATION=0 \
       -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build -j$(nproc)
+    && cmake --build build -j4
 
 # ─────────────────────────────────────────────
 # Stage 2: Runtime image
