@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-dev libglu1-mesa-dev \
     libcurl4-openssl-dev libssl-dev \
     libudev-dev libdbus-1-dev \
+    libwebkit2gtk-4.0-dev \
     libtbb-dev \
     zlib1g-dev libjpeg-dev libpng-dev libtiff-dev \
     libboost-all-dev \
