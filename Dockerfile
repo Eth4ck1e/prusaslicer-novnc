@@ -5,9 +5,9 @@ ARG UBUNTU_VERSION=22.04
 # ─────────────────────────────────────────────
 FROM ubuntu:${UBUNTU_VERSION} AS builder
 
-# Pass a git branch or tag. Defaults to main (always latest).
+# Git tag to build. Defaults to latest release tag.
 # Override at build time: --build-arg PRUSA_VERSION=version_2.8.1
-ARG PRUSA_VERSION=main
+ARG PRUSA_VERSION=version_2.9.4
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -37,9 +37,20 @@ RUN git clone --depth 1 --branch ${PRUSA_VERSION} \
 WORKDIR /prusa
 
 # Patch broken/unreachable download URLs before building deps.
-# gmplib.org port 443 is closed — use the GNU FTP mirror instead.
+# 1. gmplib.org port 443 is closed — use the GNU FTP mirror.
+# 2. libtiff GitLab zip has an unstable hash (GitLab regenerates archives) —
+#    replace with the official stable tarball from download.osgeo.org and
+#    clear the expected hash so CMake accepts whatever is served.
 RUN find deps -name "*.cmake" -exec \
-    sed -i 's|https://gmplib.org/download/gmp/|https://ftp.gnu.org/gnu/gmp/|g' {} +
+      sed -i 's|https://gmplib.org/download/gmp/|https://ftp.gnu.org/gnu/gmp/|g' {} + \
+    && if [ -f deps/TIFF/TIFF.cmake ]; then \
+         sed -i \
+           's|https://gitlab.com/libtiff/libtiff/-/archive/v4.6.0/libtiff-v4.6.0.zip|https://download.osgeo.org/libtiff/tiff-4.6.0.tar.gz|g' \
+           deps/TIFF/TIFF.cmake \
+         && sed -i \
+           's|5d652432123223338a6ee642a6499d98ebc5a702f8a065571e1001d4c08c37e6||g' \
+           deps/TIFF/TIFF.cmake; \
+       fi
 
 # Build bundled third-party deps first (slow, but cached as its own layer).
 # Use Ninja to avoid make jobserver issues with ExternalProject (e.g. OCCT).
