@@ -9,7 +9,9 @@ FROM ubuntu:${UBUNTU_VERSION} AS builder
 # Override at build time: --build-arg PRUSA_VERSION=version_2.8.1
 ARG PRUSA_VERSION=main
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git cmake build-essential pkg-config ccache ca-certificates ninja-build \
