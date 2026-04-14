@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>PrusaSlicer-noVNC</Name>
-  <Repository>ghcr.io/Eth4ck1e/prusaslicer-novnc:latest</Repository>
+  <Repository>ghcr.io/eth4ck1e/prusaslicer-novnc:latest</Repository>
   <Registry>https://github.com/Eth4ck1e/prusaslicer-novnc/pkgs/container/prusaslicer-novnc</Registry>
   <Network>bridge</Network>
   <MyIP/>
