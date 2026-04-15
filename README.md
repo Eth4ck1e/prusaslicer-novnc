@@ -173,6 +173,12 @@ To bump manually, go to **Actions → Build PrusaSlicer** and run the workflow w
 
 ---
 
+## Credits
+
+Thanks to [helfrichmichael](https://github.com/helfrichmichael) for the original [prusaslicer-novnc](https://github.com/helfrichmichael/prusaslicer-novnc) project that inspired this work.
+
+PrusaSlicer is developed by [Prusa Research](https://www.prusa3d.com/) and is licensed under [AGPL-3.0](https://github.com/prusa3d/PrusaSlicer/blob/master/LICENSE).
+
 ## Links
 
 - [PrusaSlicer](https://www.prusa3d.com/prusaslicer/)
@@ -180,4 +186,3 @@ To bump manually, go to **Actions → Build PrusaSlicer** and run the workflow w
 - [VirtualGL](https://virtualgl.org/)
 - [noVNC](https://novnc.com/)
 - [supervisord](http://supervisord.org/)
-- [Original fork — helfrichmichael/prusaslicer-novnc](https://github.com/helfrichmichael/prusaslicer-novnc)
