@@ -71,8 +71,7 @@ exec xpra start ${DISPLAY} \\
   --resize-display=yes \\
   --dpi=96 \\
   --file-transfer=yes \\
-  --download-path=/models/ \\
-  --no-pulseaudio \\
+  --pulseaudio=no \\
   --notifications=no
 EOF
 chmod +x /tmp/xpra-start.sh

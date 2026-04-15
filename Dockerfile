@@ -70,6 +70,7 @@ RUN mkdir -p /configs/.local /configs/.config \
     && echo "XDG_DOWNLOAD_DIR=\"/models/\"" >> /home/slic3r/.config/user-dirs.dirs \
     && echo "file:///models models" >> /home/slic3r/.gtk-bookmarks \
     && echo "file:///prints prints" >> /home/slic3r/.gtk-bookmarks \
+    && ln -s /models /home/slic3r/Downloads \
     && chown -R slic3r:slic3r /home/slic3r/ /prints/ /models/ /configs/
 
 ENV PATH=${PATH}:/opt/VirtualGL/bin
