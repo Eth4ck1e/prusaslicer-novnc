@@ -46,6 +46,15 @@ RUN wget -q https://xpra.org/gpg.asc -O- | gpg --dearmor > /usr/share/keyrings/x
     && apt-get install -y --no-install-recommends xpra xpra-x11 xpra-html5 \
     && rm -rf /var/lib/apt/lists/*
 
+# Xpra server config:
+# - Set a sensible initial virtual display size so PrusaSlicer windows open
+#   on-screen before the first client connects and triggers a resize
+# - Disable opengl forwarding (we use VirtualGL for that, not xpra's path)
+RUN mkdir -p /etc/xpra/conf.d && cat > /etc/xpra/conf.d/99-docker.conf << 'EOF'
+desktop-display-size = 1920x1080
+opengl = no
+EOF
+
 # Install VirtualGL for GPU-accelerated OpenGL rendering
 RUN wget -qO /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb \
       https://packagecloud.io/dcommander/virtualgl/packages/any/any/virtualgl_${VIRTUALGL_VERSION}_amd64.deb/download.deb?distro_version_id=35 \
