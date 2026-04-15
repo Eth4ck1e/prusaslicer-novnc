@@ -12,7 +12,7 @@
   <Overview>PrusaSlicer running in your browser via noVNC. Fork of helfrichmichael/prusaslicer-novnc with Intel Arc GPU support.</Overview>
   <Category>Tools: MediaApp:Other</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <TemplateURL/>
+  <TemplateURL>https://raw.githubusercontent.com/Eth4ck1e/prusaslicer-novnc/main/prusaslicer-novnc.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Eth4ck1e/prusaslicer-novnc/main/icons/prusaslicer-96x96.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
