@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: write
 
     steps:
       - name: Check out the repo
@@ -51,3 +52,11 @@ jobs:
           tags: |
             ghcr.io/${{ steps.owner.outputs.owner }}/prusaslicer-novnc-builder:${{ steps.version.outputs.tag }}
             ghcr.io/${{ steps.owner.outputs.owner }}/prusaslicer-novnc-builder:latest
+
+      - name: Trigger runtime image build
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/docker.yml/dispatches \
+            -d '{"ref":"main"}'

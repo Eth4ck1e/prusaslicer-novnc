@@ -1,0 +1,69 @@
+name: Auto-bump PrusaSlicer version
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 6am UTC
+  workflow_dispatch:
+
+jobs:
+  check_and_bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Get latest PrusaSlicer release tag
+        id: latest
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/prusa3d/PrusaSlicer/releases/latest | jq -r '.tag_name')
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG#version_}" >> $GITHUB_OUTPUT
+
+      - name: Get current version from Dockerfile
+        id: current
+        run: |
+          VERSION=$(grep '^ARG PRUSA_VERSION=' Dockerfile | head -1 | cut -d= -f2)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: check
+        run: |
+          if [ "${{ steps.latest.outputs.version }}" != "${{ steps.current.outputs.version }}" ]; then
+            echo "update=true" >> $GITHUB_OUTPUT
+            echo "New version found: ${{ steps.latest.outputs.version }} (current: ${{ steps.current.outputs.version }})"
+          else
+            echo "update=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: ${{ steps.current.outputs.version }}"
+          fi
+
+      - name: Update version in Dockerfiles
+        if: steps.check.outputs.update == 'true'
+        run: |
+          NEW_VERSION="${{ steps.latest.outputs.version }}"
+          NEW_TAG="${{ steps.latest.outputs.tag }}"
+          # Runtime Dockerfile uses bare version (e.g. 2.9.4)
+          sed -i "s/^ARG PRUSA_VERSION=.*/ARG PRUSA_VERSION=${NEW_VERSION}/" Dockerfile
+          # Builder Dockerfile uses full git tag (e.g. version_2.9.4)
+          sed -i "s/^ARG PRUSA_VERSION=.*/ARG PRUSA_VERSION=${NEW_TAG}/" Dockerfile.builder
+
+      - name: Commit version bump
+        if: steps.check.outputs.update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile Dockerfile.builder
+          git commit -m "chore: bump PrusaSlicer ${{ steps.current.outputs.version }} → ${{ steps.latest.outputs.version }} [skip ci]"
+          git push
+
+      - name: Trigger builder workflow
+        if: steps.check.outputs.update == 'true'
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-prusaslicer.yml/dispatches \
+            -d '{"ref":"main","inputs":{"prusa_version":"${{ steps.latest.outputs.tag }}"}}'
