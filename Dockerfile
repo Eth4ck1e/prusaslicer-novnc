@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Runtime libs needed by compiled PrusaSlicer
     libgtk-3-0 libglu1-mesa libcurl4 libtbb2 libdbus-1-3 \
     libwebkit2gtk-4.0-dev \
+    openbox \
     && locale-gen en_US \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,6 +46,13 @@ RUN wget -q https://xpra.org/gpg.asc -O- | gpg --dearmor > /usr/share/keyrings/x
     && apt-get update \
     && apt-get install -y --no-install-recommends xpra xpra-x11 xpra-html5 \
     && rm -rf /var/lib/apt/lists/*
+
+# Pin the xpra HTML5 floating toolbar to top-right by default.
+# Targets the most common element IDs/classes across xpra-html5 versions.
+RUN HTML=$(find /usr/share/xpra/www -maxdepth 1 -name "index.html" | head -1) && \
+    [ -n "$HTML" ] && sed -i \
+      's|</head>|<style>#toolbar,#xpra_toolbar,.toolbar,.xpra-toolbar{right:8px!important;left:auto!important;top:8px!important;}</style></head>|' \
+      "$HTML" || true
 
 # Xpra server config:
 # - Set a sensible initial virtual display size so PrusaSlicer windows open

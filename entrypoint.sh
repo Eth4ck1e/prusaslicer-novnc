@@ -61,10 +61,12 @@ export LIBVA_DRIVER_NAME=${LIBVA_DRIVER_NAME:-}
 export NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-}
 
 exec xpra start ${DISPLAY} \\
-  --start-child="${PRUSA_CMD}" \\
+  --start=openbox \\
+  --start-child="/bin/bash -c 'sleep 2 && ${PRUSA_CMD}'" \\
   --exit-with-children=yes \\
   --html=on \\
   --bind-tcp=0.0.0.0:${NOVNC_PORT} \\
+  --session-name=PrusaSlicer \\
   ${XPRA_AUTH_ARGS} \\
   --no-daemon \\
   --sharing=yes \\
