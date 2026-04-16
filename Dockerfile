@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Runtime libs needed by compiled PrusaSlicer
     libgtk-3-0 libglu1-mesa libcurl4 libtbb2 libdbus-1-3 \
     libwebkit2gtk-4.0-dev \
-    openbox \
     && locale-gen en_US \
     && rm -rf /var/lib/apt/lists/*
 
