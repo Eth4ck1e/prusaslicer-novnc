@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Clean up any stale X lock/socket files from previous runs (runs as root)
+rm -f /tmp/.X*-lock
+rm -f /tmp/.X11-unix/X*
+
 export DISPLAY=${DISPLAY:-:10}
 export NOVNC_PORT=${NOVNC_PORT:-8080}
 export VNC_RESOLUTION=${VNC_RESOLUTION:-1920x1080}
