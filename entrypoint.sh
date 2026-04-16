@@ -72,8 +72,7 @@ pkill -f "Xvfb.*:${DISPLAY_NUM}" 2>/dev/null || true
 sleep 1
 rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}
 
-exec xpra desktop ${DISPLAY} \\
-  --start=openbox \\
+exec xpra start ${DISPLAY} \\
   --start-child="/bin/bash -c 'sleep 2 && ${PRUSA_CMD}'" \\
   --exit-with-children=yes \\
   --html=on \\
@@ -83,6 +82,7 @@ exec xpra desktop ${DISPLAY} \\
   --no-daemon \\
   --sharing=yes \\
   --resize-display=yes \\
+  --desktop-scaling=off \\
   --xvfb="Xvfb -screen 0 ${VNC_RESOLUTION}x24 +extension Composite +extension RANDR +extension RENDER -nolisten tcp -noreset" \\
   --dpi=96 \\
   --file-transfer=yes \\
