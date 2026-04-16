@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-# Clean up any stale X lock/socket files from previous runs (runs as root)
+# Kill any lingering Xvfb processes and clean up stale X lock/socket files (runs as root)
+pkill -f "Xvfb" 2>/dev/null || true
 rm -f /tmp/.X*-lock
 rm -f /tmp/.X11-unix/X*
 
@@ -66,7 +67,9 @@ export VGL_DISPLAY=${VGL_DISPLAY}
 export LIBVA_DRIVER_NAME=${LIBVA_DRIVER_NAME:-}
 export NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-}
 
-# Clean up stale display locks on every restart (supervisord reruns this script)
+# Kill any lingering Xvfb and clean up stale display locks on every restart
+pkill -f "Xvfb.*:${DISPLAY_NUM}" 2>/dev/null || true
+sleep 1
 rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}
 
 exec xpra start ${DISPLAY} \\
