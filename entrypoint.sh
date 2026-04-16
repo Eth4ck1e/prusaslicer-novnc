@@ -53,12 +53,17 @@ export SUPD_LOGLEVEL="${SUPD_LOGLEVEL:-INFO}"
 
 # Write the xpra start script so supervisord can run it cleanly
 # (avoids shell quoting issues passing complex commands through supervisord.conf)
+DISPLAY_NUM=${DISPLAY#:}
+
 cat > /tmp/xpra-start.sh << EOF
 #!/bin/bash
 export DISPLAY=${DISPLAY}
 export VGL_DISPLAY=${VGL_DISPLAY}
 export LIBVA_DRIVER_NAME=${LIBVA_DRIVER_NAME:-}
 export NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-}
+
+# Clean up stale display locks on every restart (supervisord reruns this script)
+rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}
 
 exec xpra start ${DISPLAY} \\
   --start=openbox \\
